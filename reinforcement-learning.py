@@ -1,7 +1,9 @@
-import numpy as np
-from tictactoe import TicTacToe, Player
-from typing import Set,Dict
 import random
+from typing import Dict, Set
+
+import numpy as np
+
+from tictactoe import Player, TicTacToe
 
 
 class Agent:
@@ -9,12 +11,15 @@ class Agent:
         self.value_function = ValueFunction()
         self.exploration = exploration
         self.exploration_decay = exploration_decay
-        self.previous_state: Dict[Player, TicTacToe] = {Player.X: TicTacToe(), Player.O: TicTacToe()}
+        self.previous_state: Dict[Player, TicTacToe] = {
+            Player.X: TicTacToe(),
+            Player.O: TicTacToe(),
+        }
         self.alpha = 0.1
-    
+
     def get_move(self, game: TicTacToe, player: Player):
         valid_moves = game.get_valid_moves()
-        
+
         best_move = None
         best_value = -1 if player == Player.X else 1
         for valid_move in valid_moves:
@@ -29,23 +34,25 @@ class Agent:
                 if value < best_value:
                     best_value = value
                     best_move = valid_move
-        
+
         chosen_move = None
         if random.random() < self.exploration:
             move_index = random.randrange(0, len(valid_moves))
             chosen_move = valid_moves[move_index]
         else:
             chosen_move = best_move
-        
+
         self.exploration *= self.exploration_decay
 
         new_game = game.copy()
         new_game.make_move(chosen_move[0], chosen_move[1])
-        self.value_function.update_value(self.previous_state[player], new_game, self.alpha)      
-        self.previous_state[player] = new_game  
+        self.value_function.update_value(
+            self.previous_state[player], new_game, self.alpha
+        )
+        self.previous_state[player] = new_game
 
         return chosen_move
-    
+
     def lost_game(self, game: TicTacToe, player: Player):
         self.value_function.update_value(self.previous_state[player], game, self.alpha)
 
@@ -65,7 +72,7 @@ class ValueFunction:
 
             match state.get_winner():
                 case None:
-                    self.value[state] = 0 
+                    self.value[state] = 0
                 case Player.X:
                     self.value[state] = 1
                 case Player.O:
@@ -80,7 +87,9 @@ class ValueFunction:
                 open_states.add(new_state)
 
     def update_value(self, state: TicTacToe, state_prime: TicTacToe, alpha: float):
-        self.value[state] = self.value[state] + alpha * (self.value[state_prime] - self.value[state])
+        self.value[state] = self.value[state] + alpha * (
+            self.value[state_prime] - self.value[state]
+        )
 
     def get_value(self, state: TicTacToe) -> float:
         return self.value[state]
@@ -98,8 +107,7 @@ if __name__ == "__main__":
             game.make_move(move[0], move[1])
         loser = Player.X if game.get_winner() == Player.O else Player.O
         agent.lost_game(game, loser)
-            
-        
+
         games_played += 1
         if games_played % 100 == 0:
             print(games_played)
@@ -118,5 +126,18 @@ if __name__ == "__main__":
                 wins += game.winner == Player.X
                 losses += game.winner == Player.O
             print(f"{wins} vs {losses}")
-        
 
+        if games_played == 3000:
+            break
+
+    while True:
+        game = TicTacToe()
+        while not game.is_game_over():
+            if game.current_player == Player.X:
+                move = agent.get_move(game, game.current_player)
+            else:
+                row = int(input("Enter row (0-2): "))
+                col = int(input("Enter column (0-2): "))
+                move = (row, col)
+            game.make_move(move[0], move[1])
+            game.display()
